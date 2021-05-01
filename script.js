@@ -2,9 +2,135 @@
 
 const img = new Image(); // used to load image from <input> and draw to canvas
 
+// Define canvas to display meme on
+const canvas = document.getElementById('user-image');
+const ctx = canvas.getContext('2d');
+
+// Define variables for input text
+const text_top = document.getElementById('text-top');
+const text_bottom = document.getElementById('text-bottom');
+
+// Get form submission input
+const form = document.getElementById('generate-meme');
+
+// Variables for buttons and voice selection choice
+const generate_btn = document.querySelector('button[type=submit]');
+const clear_btn = document.querySelector('button[type=reset]');
+const read_btn = document.querySelector('button[type=button]');
+const voice = document.getElementById('voice-selection');
+const volume = document.querySelector('input[type=range]');
+
+// Declare the synth variable for text to speech
+let synth = window.speechSynthesis;
+let voices = [];
+let voicesAdded = false;
+let utterance;
+
+// Gets the url for the inputted image
+const img_add = document.getElementById('image-input');
+img_add.addEventListener('change', () => {
+  img.src = "images/" + document.getElementById('image-input').files[0].name;
+})
+// Event listener for form submission to add text to canvas
+form.addEventListener('submit', () => {
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'white';
+  ctx.font = '48px fantasy';
+  writeFunction();
+  event.preventDefault();
+  toggleButtons();
+  if (voicesAdded == false) {
+    populateVoiceList();
+  }
+  utterance = new SpeechSynthesisUtterance(text_top.value + text_bottom.value);
+})
+// Event listener to clear the canvas when the clear button is clicked
+clear_btn.addEventListener('click', () => {
+  toggleButtons();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+})
+// Helper function to write text to canvas
+function writeFunction() {
+  ctx.textBaseline = 'top';
+  ctx.fillText(text_top.value, canvas.width/2, 0);
+  ctx.strokeText(text_top.value, canvas.width/2, 0);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(text_bottom.value, canvas.width/2, canvas.height);
+  ctx.strokeText(text_bottom.value, canvas.width/2, canvas.height);
+}
+// Helper function to toggle the buttons on the form depending on the context
+function toggleButtons() {
+  if (generate_btn.disabled == false) {
+    generate_btn.disabled = true;
+    clear_btn.disabled = false;
+    read_btn.disabled = false;
+    voice.disabled = false;
+  }
+  else {
+    generate_btn.disabled = false;
+    clear_btn.disabled = true;
+    read_btn.disabled = true;
+    voice.disabled = true;
+  }
+}
+// Function to populate the voice list selector
+function populateVoiceList() {
+  voices = synth.getVoices();
+  for(let i = 0; i < voices.length ; i++) {
+    let option = document.createElement('option');
+    option.textContent = voices[i].name + ' (' + voices[i].lang + ')';
+
+    if(voices[i].default) {
+      option.textContent += ' -- DEFAULT';
+      option.setAttribute('selected', '');
+    }
+    option.setAttribute('data-lang', voices[i].lang);
+    option.setAttribute('data-name', voices[i].name);
+    voice.appendChild(option);
+    option.innerText = voices[i].name;
+  }
+  voicesAdded = true;
+  voice.remove(0);
+}
+// Event listener that reads aloud the meme text when the read aloud button is pressed
+read_btn.addEventListener('click', () => {
+  let selectedOption = voice.selectedOptions[0].getAttribute('data-name');
+  for(let i = 0; i < voices.length ; i++) {
+    if(voices[i].name === selectedOption) {
+      utterance.voice = voices[i];
+    }
+  }
+  utterance.volume = volume.value/100;
+  window.speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+})
+// Event listener that changes the displayed icon for the volume slider when it is changed
+volume.addEventListener('change', () => {
+  let volumeDiv = document.getElementById('volume-group');
+  let volumeIcon = volumeDiv.getElementsByTagName('img')[0];
+  if (volume.value >= 67) {
+    volumeIcon.src = "icons/volume-level-3.svg"; 
+  }
+  else if (volume.value >= 34) {
+    volumeIcon.src = "icons/volume-level-2.svg";
+  }
+  else if (volume.value >= 1) {
+    volumeIcon.src = "icons/volume-level-1.svg";
+  }
+  else {
+    volumeIcon.src = "icons/volume-level-0.svg";
+  }
+})
+
 // Fires whenever the img object loads a new image (such as with img.src =)
 img.addEventListener('load', () => {
-  // TODO
+  // Sets the background of the canvas to be black
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Gets the appropriate dimensions for the image and draws the image
+  let dimensions = getDimmensions(canvas.width, canvas.height, img.width, img.height);
+  ctx.drawImage(img, dimensions.startX, dimensions.startY, dimensions.width, dimensions.height);
 
   // Some helpful tips:
   // - Fill the whole Canvas with black first to add borders on non-square images, then draw on top
